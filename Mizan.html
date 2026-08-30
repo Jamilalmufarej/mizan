@@ -629,6 +629,11 @@ function finishLogin(user) {
   document.getElementById('app-screen').style.display   = 'block';
   document.getElementById('hdr-user-badge').textContent  = user.code;
   document.getElementById('welcome-name').textContent    = user.code;
+  // إعادة ضبط القائمة الجانبية أولاً
+  document.getElementById('nav-home').style.display     = 'flex';
+  document.getElementById('nav-evaluate').style.display = 'flex';
+  document.getElementById('nav-history').style.display  = 'flex';
+  document.getElementById('nav-admin').style.display    = 'none';
   if (user.sector === 'ADMIN') {
     document.getElementById('nav-home').style.display     = 'none';
     document.getElementById('nav-evaluate').style.display = 'none';
