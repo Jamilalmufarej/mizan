@@ -511,154 +511,177 @@ let DB = {
 // ══════════════════════════════════════════════
 //  بطاقة معايير تحكيم الممارسات التدريبية
 //  المعهد الوطني للتطوير المهني التعليمي
-//  الإصدار الأخير المعتمد
+//  الإصدار المعتمد — القوائم المنسدلة بمؤشرات القياس
 // ══════════════════════════════════════════════
 
-// شروط الاكتمال — لا تُحتسب في الدرجة لكن يجب اكتمالها
+// ── شروط الاكتمال (مكتمل / غير مكتمل) ─────────────────────
 const COMPLETION_REQS = [
-  {id:"cr1", name:"أ-1: اكتمال عناصر بيانات الممارسة", hint:"ذكر عنوان الممارسة، تاريخ الإعداد، الإدارة التعليمية، الحقيبة المرتبطة"},
-  {id:"cr2", name:"ب-2: الوضوح والإيجاز في التعريف بالممارسة", hint:"أن يتضمن إطار الممارسة مقدمة واضحة ومعبرة عن محتوى الممارسة"},
-  {id:"cr3", name:"ب-3: تحديد الفئة المستهدفة", hint:"تتضمن الممارسة الفئة المستهدفة للتطبيق"},
-  {id:"cr4", name:"ب-6: تحديد الأدوات اللازمة للتطبيق", hint:"تتضمن الممارسة ذكر الأدوات والمتطلبات اللازمة لتنفيذها"},
-  {id:"cr5", name:"الممارسة خالية من المخالفات الشرعية والنظامية والفنية", hint:"التحقق من خلو الممارسة من أي مخالفات"},
+  {id:"cr1",
+   name:"أ-1: اكتمال عناصر بيانات الممارسة في الصفحة الرئيسية",
+   indicator:"تحقّق: هل ذُكر عنوان الممارسة؟ تاريخ الإعداد؟ الإدارة التعليمية؟ الحقيبة المرتبطة؟ — يجب اكتمال جميع العناصر الأربعة."},
+  {id:"cr2",
+   name:"ب-2: الوضوح والإيجاز في التعريف بالممارسة",
+   indicator:"تحقّق: هل يتضمن إطار الممارسة مقدمة واضحة ومعبّرة عن محتواها؟ هل يمكن لقارئ جديد فهم الممارسة من المقدمة وحدها؟"},
+  {id:"cr3",
+   name:"ب-3: تحديد الفئة المستهدفة بالممارسة",
+   indicator:"تحقّق: هل صرّحت الممارسة بالفئة المستهدفة للتطبيق (مستوى القيادة، نوع المدرسة، الخبرة المطلوبة)؟"},
+  {id:"cr4",
+   name:"ب-6: تحديد الأدوات اللازمة للتطبيق",
+   indicator:"تحقّق: هل ذكرت الممارسة الأدوات والمتطلبات اللازمة لتنفيذها (مواد، أجهزة، مساحة، وقت)؟"},
+  {id:"cr5",
+   name:"سلامة الممارسة من المخالفات",
+   indicator:"تحقّق: هل الممارسة خالية من المخالفات الشرعية والنظامية والفنية والتنظيمية؟"},
 ];
 
-// المعايير المقيّمة بقوائم منسدلة — موزعة على 4 محاور بأوزانها
+// خيارات الاكتمال
+const COMPLETION_OPTIONS = ["مكتمل","غير مكتمل"];
+
+// ── المعايير المقيّمة ────────────────────────────────────────
+// محاور أ وب وج: مستوفٍ بإتقان / مستوفٍ / مستوفٍ جزئياً / غير مستوفٍ / لا ينطبق
+// محور د: متحقق بإتقان / متحقق / متحقق جزئياً / غير متحقق / لا ينطبق
+
+const OPT_ABC = ["مستوفٍ بإتقان","مستوفٍ","مستوفٍ جزئياً","غير مستوفٍ","لا ينطبق"];
+const OPT_D   = ["متحقق بإتقان","متحقق","متحقق جزئياً","غير متحقق","لا ينطبق"];
+const SCR_ABC = {"مستوفٍ بإتقان":10,"مستوفٍ":7,"مستوفٍ جزئياً":4,"غير مستوفٍ":0,"لا ينطبق":null};
+const SCR_D   = {"متحقق بإتقان":10,"متحقق":7,"متحقق جزئياً":4,"غير متحقق":0,"لا ينطبق":null};
+
 const AXES = [
-  // ── أ: بيانات الممارسة وعنوانها (وزن 10) ──
+  // ══ أ: بيانات الممارسة وعنوانها (وزن 10%) ══
   {id:"a3", group:"أ", groupName:"بيانات الممارسة وعنوانها", weight:10,
-   name:"أ-3: وضوح هدف الممارسة واتساقه مع الهدف التعلمي للنشاط",
-   hint:"أهداف قابلة للقياس داعمة لتحقيق أهداف الحقيبة",
-   options:["مستوفٍ بإتقان","مستوفٍ","مستوفٍ جزئياً","غير مستوفٍ","لا ينطبق"],
-   scores:{"مستوفٍ بإتقان":10,"مستوفٍ":7,"مستوفٍ جزئياً":4,"غير مستوفٍ":0,"لا ينطبق":null}},
+   name:"أ-3: وضوح هدف الممارسة واتساقه مع الهدف التعلمي للنشاط أو الجلسة",
+   indicator:"ابحث عن: هل هدف الممارسة قابل للقياس؟ هل يتسق مع أهداف النشاط أو الجلسة في الحقيبة التدريبية؟ هل يدعم مخرجات التعلم المستهدفة؟",
+   options:OPT_ABC, scores:SCR_ABC},
+
   {id:"a4", group:"أ", groupName:"بيانات الممارسة وعنوانها", weight:10,
    name:"أ-4: عنوان واضح وموجز يعكس جوهر الممارسة",
-   hint:"عنوان مركّز ومختصر يعكس محتوى الممارسة وجوهرها",
-   options:["مستوفٍ بإتقان","مستوفٍ","مستوفٍ جزئياً","غير مستوفٍ","لا ينطبق"],
-   scores:{"مستوفٍ بإتقان":10,"مستوفٍ":7,"مستوفٍ جزئياً":4,"غير مستوفٍ":0,"لا ينطبق":null}},
+   indicator:"ابحث عن: هل العنوان مختصر ومركّز (لا يتجاوز 10 كلمات)؟ هل يعبّر عن محتوى الممارسة وجوهرها بدقة؟ هل يميّزها عن غيرها؟",
+   options:OPT_ABC, scores:SCR_ABC},
 
-  // ── ب: إطار الممارسة (وزن 20) ──
+  // ══ ب: إطار الممارسة (وزن 20%) ══
   {id:"b1", group:"ب", groupName:"إطار الممارسة", weight:20,
-   name:"ب-1: ارتباط الممارسة بأهداف البرنامج والجدارة ومخرجات التعلم",
-   hint:"اتساق الممارسة مع أهداف البرنامج والجدارة أو مخرجات التعلم المستهدفة",
-   options:["مستوفٍ بإتقان","مستوفٍ","مستوفٍ جزئياً","غير مستوفٍ","لا ينطبق"],
-   scores:{"مستوفٍ بإتقان":10,"مستوفٍ":7,"مستوفٍ جزئياً":4,"غير مستوفٍ":0,"لا ينطبق":null}},
-  {id:"b7", group:"ب", groupName:"إطار الممارسة", weight:20,
-   name:"ب-7: وضوح الحاجة أو التحدي التيسيري الذي استدعى الممارسة",
-   hint:"ذكر المسوغات والدوافع التي استدعت تطبيق الممارسة والقيمة المضافة المستهدفة",
-   options:["مستوفٍ بإتقان","مستوفٍ","مستوفٍ جزئياً","غير مستوفٍ","لا ينطبق"],
-   scores:{"مستوفٍ بإتقان":10,"مستوفٍ":7,"مستوفٍ جزئياً":4,"غير مستوفٍ":0,"لا ينطبق":null}},
+   name:"ب-1: ارتباط الممارسة بأهداف البرنامج والجدارة أو مخرجات التعلم المستهدفة",
+   indicator:"ابحث عن: هل صرّحت الممارسة بالجدارة المرتبطة بها؟ هل إجراءاتها تخدم مخرجات التعلم المحددة في الحقيبة؟ هل الاتساق واضح وليس مجرد ادّعاء؟",
+   options:OPT_ABC, scores:SCR_ABC},
 
-  // ── ج: المحتوى العلمي للممارسة (وزن 30) ──
+  {id:"b7", group:"ب", groupName:"إطار الممارسة", weight:20,
+   name:"ب-7: وضوح الحاجة أو التحدي التيسيري الذي استدعى الممارسة والقيمة المضافة",
+   indicator:"ابحث عن: هل وضّحت الممارسة سبب إعدادها؟ ما التحدي الذي تعالجه؟ ما القيمة التي تضيفها فوق ما هو موجود في الحقيبة أصلاً؟",
+   options:OPT_ABC, scores:SCR_ABC},
+
+  // ══ ج: المحتوى العلمي للممارسة (وزن 30%) ══
   {id:"c1", group:"ج", groupName:"المحتوى العلمي للممارسة", weight:30,
-   name:"ج-1: ارتباط إجراءات الممارسة بالنشاط والتعلم المقصود",
-   hint:"وجود اتساق مباشر بين إجراءات الممارسة والنشاط والتعلم المقصود",
-   options:["مستوفٍ بإتقان","مستوفٍ","مستوفٍ جزئياً","غير مستوفٍ","لا ينطبق"],
-   scores:{"مستوفٍ بإتقان":10,"مستوفٍ":7,"مستوفٍ جزئياً":4,"غير مستوفٍ":0,"لا ينطبق":null}},
+   name:"ج-1: ارتباط إجراءات الممارسة بالنشاط والتعلم المقصود دون الإخلال به",
+   indicator:"ابحث عن: هل إجراءات الممارسة تخدم محتوى النشاط وتعمّقه؟ أم أنها تشتّت عنه أو تستبدله؟ هل يمكن تنفيذها دون المساس بأهداف النشاط الأصلي؟",
+   options:OPT_ABC, scores:SCR_ABC},
+
   {id:"c3", group:"ج", groupName:"المحتوى العلمي للممارسة", weight:30,
    name:"ج-3: وضوح خطوات التنفيذ وتسلسلها وأدوار المشاركين",
-   hint:"تحديد واضح ومفصّل ومتدرج لمكونات الممارسة وخطواتها وأدوار المشاركين",
-   options:["مستوفٍ بإتقان","مستوفٍ","مستوفٍ جزئياً","غير مستوفٍ","لا ينطبق"],
-   scores:{"مستوفٍ بإتقان":10,"مستوفٍ":7,"مستوفٍ جزئياً":4,"غير مستوفٍ":0,"لا ينطبق":null}},
+   indicator:"ابحث عن: هل الخطوات مرتّبة ومتسلسلة منطقياً؟ هل دور كل طرف (الميسر / المشاركين) محدد بوضوح في كل خطوة؟ هل يمكن لميسر آخر تنفيذها بنفس الطريقة؟",
+   options:OPT_ABC, scores:SCR_ABC},
+
   {id:"c4", group:"ج", groupName:"المحتوى العلمي للممارسة", weight:30,
-   name:"ج-4: قابلية الممارسة للتنفيذ في السياق التدريبي الفعلي",
-   hint:"إمكانية تنفيذ الممارسة وأنشطتها في السياق التدريبي ضمن الموارد المتاحة",
-   options:["مستوفٍ بإتقان","مستوفٍ","مستوفٍ جزئياً","غير مستوفٍ","لا ينطبق"],
-   scores:{"مستوفٍ بإتقان":10,"مستوفٍ":7,"مستوفٍ جزئياً":4,"غير مستوفٍ":0,"لا ينطبق":null}},
+   name:"ج-4: قابلية الممارسة للتنفيذ في السياق التدريبي الفعلي ضمن الموارد المتاحة",
+   indicator:"ابحث عن: هل الأدوات المطلوبة متاحة في بيئة التدريب العادية؟ هل تتطلب ترتيبات استثنائية؟ هل يمكن تنفيذها في القاعة المعتادة؟",
+   options:OPT_ABC, scores:SCR_ABC},
+
   {id:"c5", group:"ج", groupName:"المحتوى العلمي للممارسة", weight:30,
-   name:"ج-5: ملاءمة الممارسة لخبرات قادة المدارس واحتياجاتهم",
-   hint:"اتساق الممارسة وإجراءاتها مع سمات وخصائص قيادات المدارس",
-   options:["مستوفٍ بإتقان","مستوفٍ","مستوفٍ جزئياً","غير مستوفٍ","لا ينطبق"],
-   scores:{"مستوفٍ بإتقان":10,"مستوفٍ":7,"مستوفٍ جزئياً":4,"غير مستوفٍ":0,"لا ينطبق":null}},
+   name:"ج-5: ملاءمة الممارسة لخبرات قادة المدارس واحتياجاتهم وسياقهم المهني",
+   indicator:"ابحث عن: هل تراعي الممارسة أن المشاركين قادة مدارس ذوو خبرة؟ هل أمثلتها من السياق التعليمي السعودي؟ هل تحترم مستوى خبرتهم دون مبالغة في التبسيط أو التعقيد؟",
+   options:OPT_ABC, scores:SCR_ABC},
+
   {id:"c6", group:"ج", groupName:"المحتوى العلمي للممارسة", weight:30,
-   name:"ج-6: إتاحة فرص مناسبة للمشاركة مع اختلاف الخبرات والأنماط",
-   hint:"وجود أنشطة متنوعة تراعي اختلافات المشاركين وأنماط تعلمهم",
-   options:["مستوفٍ بإتقان","مستوفٍ","مستوفٍ جزئياً","غير مستوفٍ","لا ينطبق"],
-   scores:{"مستوفٍ بإتقان":10,"مستوفٍ":7,"مستوفٍ جزئياً":4,"غير مستوفٍ":0,"لا ينطبق":null}},
+   name:"ج-6: إتاحة فرص مناسبة للمشاركة مع اختلاف الخبرات والاحتياجات والأنماط",
+   indicator:"ابحث عن: هل تتضمن الممارسة أنشطة متنوعة (كتابة فردية، نقاش، عمل جماعي)؟ هل تتيح للمشارك الأقل حديثاً مساحة للمشاركة دون إجبار؟",
+   options:OPT_ABC, scores:SCR_ABC},
+
   {id:"c7", group:"ج", groupName:"المحتوى العلمي للممارسة", weight:30,
-   name:"ج-7: دفع المشاركين لتحليل الأفكار وفحص الافتراضات",
-   hint:"دعم أنشطة الممارسة للتأمل والتعمق الفكري في المفاهيم والممارسات",
-   options:["مستوفٍ بإتقان","مستوفٍ","مستوفٍ جزئياً","غير مستوفٍ","لا ينطبق"],
-   scores:{"مستوفٍ بإتقان":10,"مستوفٍ":7,"مستوفٍ جزئياً":4,"غير مستوفٍ":0,"لا ينطبق":null}},
+   name:"ج-7: دفع المشاركين لتحليل الأفكار وفحص الافتراضات وبناء روابط جديدة",
+   indicator:"ابحث عن: هل تتضمن أسئلة تدفع للتفكير النقدي لا مجرد الاسترجاع؟ هل تطلب من المشارك مقارنة أو تحليل أو استنتاج؟ هل تفتح للمشارك زاوية نظر لم تكن لديه من قبل؟",
+   options:OPT_ABC, scores:SCR_ABC},
+
   {id:"c8", group:"ج", groupName:"المحتوى العلمي للممارسة", weight:30,
-   name:"ج-8: إمكانية تنفيذ الممارسة ضمن الزمن المخصص",
-   hint:"إمكانية تطبيق الممارسة من حيث الزمن دون التأثير على سير الجلسة",
-   options:["مستوفٍ بإتقان","مستوفٍ","مستوفٍ جزئياً","غير مستوفٍ","لا ينطبق"],
-   scores:{"مستوفٍ بإتقان":10,"مستوفٍ":7,"مستوفٍ جزئياً":4,"غير مستوفٍ":0,"لا ينطبق":null}},
+   name:"ج-8: إمكانية تنفيذ الممارسة ضمن الزمن المخصص دون الإخلال بمحتوى الحقيبة",
+   indicator:"ابحث عن: هل حُدّد زمن الممارسة؟ هل هو واقعي بالنسبة لعدد الخطوات؟ هل يتناسب مع زمن النشاط في الحقيبة دون أن يتجاوزه؟",
+   options:OPT_ABC, scores:SCR_ABC},
+
   {id:"c10", group:"ج", groupName:"المحتوى العلمي للممارسة", weight:30,
-   name:"ج-10: تضمين أسئلة منظمة تدفع للاستقصاء والتأمل والاستناد للأدلة",
-   hint:"تتضمن إجراءات الممارسة أسئلة أو خطوات منظمة تدعم الاستقصاء والتأمل",
-   options:["مستوفٍ بإتقان","مستوفٍ","مستوفٍ جزئياً","غير مستوفٍ","لا ينطبق"],
-   scores:{"مستوفٍ بإتقان":10,"مستوفٍ":7,"مستوفٍ جزئياً":4,"غير مستوفٍ":0,"لا ينطبق":null}},
+   name:"ج-10: تضمين أسئلة أو خطوات منظمة تدفع للاستقصاء والتأمل والاستناد للأدلة",
+   indicator:"ابحث عن: هل تتضمن الممارسة أسئلة مفتوحة تبدأ بـ'لماذا / كيف / ما الذي'؟ هل تطلب من المشارك الاستناد لأدلة من واقعه قبل الاستنتاج؟",
+   options:OPT_ABC, scores:SCR_ABC},
+
   {id:"c11", group:"ج", groupName:"المحتوى العلمي للممارسة", weight:30,
    name:"ج-11: إتاحة تغذية راجعة تساعد على مراجعة الفهم وتحسين التطبيق",
-   hint:"وجود إجراءات داعمة لتقديم التغذية الراجعة للممارسات الإدارية",
-   options:["مستوفٍ بإتقان","مستوفٍ","مستوفٍ جزئياً","غير مستوفٍ","لا ينطبق"],
-   scores:{"مستوفٍ بإتقان":10,"مستوفٍ":7,"مستوفٍ جزئياً":4,"غير مستوفٍ":0,"لا ينطبق":null}},
+   indicator:"ابحث عن: هل تتضمن الممارسة خطوة للتغذية الراجعة (من الميسر أو من الأقران)؟ هل هي مرتبطة بمحتوى الممارسة وليست عامة؟",
+   options:OPT_ABC, scores:SCR_ABC},
 
-  // ── د: الجدارات التيسيرية (وزن 40) ──
+  // ══ د: الجدارات التيسيرية (وزن 40%) ══
   {id:"d1", group:"د", groupName:"الجدارات التيسيرية", weight:40,
-   name:"د-1: توظيف استراتيجيات تربط الأبحاث بخبرات المشاركين (بناء المعرفة)",
-   hint:"دعم الممارسة للربط بين خبرات المشاركين بالأبحاث العلمية بهدف بناء المعرفة",
-   options:["متحقق بإتقان","متحقق","متحقق جزئياً","غير متحقق","لا ينطبق"],
-   scores:{"متحقق بإتقان":10,"متحقق":7,"متحقق جزئياً":4,"غير متحقق":0,"لا ينطبق":null}},
+   name:"د-1: توظيف استراتيجيات تربط الأبحاث بخبرات المشاركين لا مجرد نقل المعلومة",
+   indicator:"ابحث عن: هل تتضمن الممارسة خطوة تطلب من المشارك ربط المفهوم البحثي بتجربته الشخصية؟ هل الميسر يسهّل البناء المعرفي لا يُلقي محاضرة؟",
+   options:OPT_D, scores:SCR_D},
+
   {id:"d2", group:"د", groupName:"الجدارات التيسيرية", weight:40,
-   name:"د-2: آلية واضحة لتكييف الأمثلة مع سياق المشاركين (دعم تطبيق المعرفة)",
-   hint:"دعم إجراءات الممارسة لتحسين خبرات المشاركين وتطبيقاتهم في قيادة المدارس",
-   options:["متحقق بإتقان","متحقق","متحقق جزئياً","غير متحقق","لا ينطبق"],
-   scores:{"متحقق بإتقان":10,"متحقق":7,"متحقق جزئياً":4,"غير متحقق":0,"لا ينطبق":null}},
+   name:"د-2: آلية واضحة لتكييف الأمثلة والتطبيقات مع سياق المشاركين واحتياجاتهم",
+   indicator:"ابحث عن: هل تُوجّه الممارسة الميسر لاستخدام أمثلة من سياق المشاركين تحديداً؟ هل تتيح للمشارك تطبيق المفهوم على مدرسته الفعلية؟",
+   options:OPT_D, scores:SCR_D},
+
   {id:"d3", group:"د", groupName:"الجدارات التيسيرية", weight:40,
-   name:"د-3: حوار استقصائي وأسئلة مفتوحة تنمّي تفكير المشاركين",
-   hint:"تضمين الممارسة تنمية التفكير لدى المشاركين بطريقة عملية استقصائية",
-   options:["متحقق بإتقان","متحقق","متحقق جزئياً","غير متحقق","لا ينطبق"],
-   scores:{"متحقق بإتقان":10,"متحقق":7,"متحقق جزئياً":4,"غير متحقق":0,"لا ينطبق":null}},
+   name:"د-3: حوار استقصائي وأسئلة مفتوحة أو تحدٍّ فكري بنّاء ينمّي تفكير المشاركين",
+   indicator:"ابحث عن: هل الأسئلة المقترحة في الممارسة مفتوحة لا إجابة واحدة صحيحة لها؟ هل تدفع المشارك لاستكشاف افتراضاته الخاصة؟ هل تتيح تنوع الإجابات؟",
+   options:OPT_D, scores:SCR_D},
+
   {id:"d4", group:"د", groupName:"الجدارات التيسيرية", weight:40,
-   name:"د-4: التوازن بين التحدي والدعم وبناء أجواء ثقة (تعزيز قيمة التعلم)",
-   hint:"المحافظة على تكوين الثقة مع المشاركين وتعزيز قيمة التعلم المهني",
-   options:["متحقق بإتقان","متحقق","متحقق جزئياً","غير متحقق","لا ينطبق"],
-   scores:{"متحقق بإتقان":10,"متحقق":7,"متحقق جزئياً":4,"غير متحقق":0,"لا ينطبق":null}},
+   name:"د-4: آلية صريحة لتحقيق توازن بين التحدي والدعم وبناء أجواء الثقة",
+   indicator:"ابحث عن: هل تتضمن الممارسة توجيهاً للميسر حول كيفية دعم المشاركين المتعثرين؟ هل تبني أجواء آمنة تُشجّع التعبير دون خشية الحكم؟",
+   options:OPT_D, scores:SCR_D},
+
   {id:"d5", group:"د", groupName:"الجدارات التيسيرية", weight:40,
-   name:"د-5: توسيع فرص المشاركة وتقليل هيمنة أصوات محددة",
-   hint:"تحقق إجراءات الممارسة إتاحة فرص مناسبة للأصوات الأقل مشاركة",
-   options:["متحقق بإتقان","متحقق","متحقق جزئياً","غير متحقق","لا ينطبق"],
-   scores:{"متحقق بإتقان":10,"متحقق":7,"متحقق جزئياً":4,"غير متحقق":0,"لا ينطبق":null}},
+   name:"د-5: آلية توسّع فرص المشاركة وتحدّ من هيمنة أصوات محددة",
+   indicator:"ابحث عن: هل تتضمن الممارسة أسلوباً يضمن سماع أصوات المشاركين الأقل مبادرةً (مثل: فكّر-زاوج-شارك، بطاقات صامتة، جولة المشاركة)؟",
+   options:OPT_D, scores:SCR_D},
+
   {id:"d6", group:"د", groupName:"الجدارات التيسيرية", weight:40,
-   name:"د-6: أداة أو خطوة تأمل تدعم قراراً قيادياً مبنياً على أدلة",
-   hint:"تعزز الممارسة القدرات والمهارات التأملية لدى المشاركين بطريقة عملية",
-   options:["متحقق بإتقان","متحقق","متحقق جزئياً","غير متحقق","لا ينطبق"],
-   scores:{"متحقق بإتقان":10,"متحقق":7,"متحقق جزئياً":4,"غير متحقق":0,"لا ينطبق":null}},
+   name:"د-6: أداة أو خطوة تأمل واضحة تدعم قراراً قيادياً مبنياً على أدلة",
+   indicator:"ابحث عن: هل تتضمن الممارسة لحظة تأمل منظمة (ليس مجرد 'تأمل')؟ هل تطلب من المشارك الوصول إلى قرار أو خطوة عملية مبنية على ما تعلّمه؟",
+   options:OPT_D, scores:SCR_D},
+
   {id:"d7", group:"د", groupName:"الجدارات التيسيرية", weight:40,
    name:"د-7: توثيق واضح لتوزيع الأدوار عند التنفيذ بأكثر من ميسر",
-   hint:"تضمين الممارسة تحديد أدوار المنفذين وآلية التنسيق بينهم",
-   options:["متحقق بإتقان","متحقق","متحقق جزئياً","غير متحقق","لا ينطبق"],
-   scores:{"متحقق بإتقان":10,"متحقق":7,"متحقق جزئياً":4,"غير متحقق":0,"لا ينطبق":null}},
+   indicator:"ابحث عن: إذا نُفّذت بأكثر من ميسر — هل وُثّقت أدوار كل ميسر في كل خطوة؟ هل آلية التنسيق بينهم واضحة؟ — إذا كانت بميسر واحد اختر 'لا ينطبق'.",
+   options:OPT_D, scores:SCR_D},
 ];
 
 // ── حساب الدرجة الكلية المرجّحة ──────────────────────────
 function calcWeightedScore(scores) {
-  const groups = {أ:{total:0,count:0,weight:10}, ب:{total:0,count:0,weight:20}, ج:{total:0,count:0,weight:30}, د:{total:0,count:0,weight:40}};
-  AXES.forEach(ax => {
+  const groups = {
+    أ:{total:0, count:0, applicable:0, weight:10},
+    ب:{total:0, count:0, applicable:0, weight:20},
+    ج:{total:0, count:0, applicable:0, weight:30},
+    د:{total:0, count:0, applicable:0, weight:40}
+  };
+  AXES.forEach(function(ax) {
     const val = scores[ax.id];
+    if (!val) return;
     const score = ax.scores[val];
-    if (score !== null && score !== undefined && val) {
-      groups[ax.group].total += score;
-      groups[ax.group].count++;
-    }
+    if (score === null) return; // لا ينطبق — يُستثنى
+    groups[ax.group].total += score;
+    groups[ax.group].count++;
+    groups[ax.group].applicable++;
   });
   let weightedTotal = 0;
   let totalWeight = 0;
-  Object.keys(groups).forEach(g => {
+  Object.keys(groups).forEach(function(g) {
     const grp = groups[g];
-    if (grp.count > 0) {
-      const grpAvg = grp.total / grp.count;
-      weightedTotal += (grpAvg / 10) * grp.weight;
+    if (grp.applicable > 0) {
+      const grpPct = (grp.total / (grp.applicable * 10)) * 100;
+      weightedTotal += grpPct * grp.weight / 100;
       totalWeight += grp.weight;
     }
   });
   return totalWeight > 0 ? (weightedTotal / totalWeight) * 100 : 0;
 }
 
-// نتيجة التحكيم حسب المجموع الكلي (من 100)rtl">
+// نتيجة التحكيم حسب المجموع الكلي (من 100)// نتيجة التحكيم حسب المجموع الكلي (من 100)rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1385,74 +1408,80 @@ function renderAxes() {
 
   // ── شروط الاكتمال ────────────────────────────────────────
   const reqDiv = document.createElement('div');
-  reqDiv.style.cssText = 'background:#FEF9EC;border:2px solid var(--gold);border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem';
-  reqDiv.innerHTML = '<div style="font-size:14px;font-weight:800;color:var(--dark);margin-bottom:.75rem">📋 شرط — شروط الاكتمال والبيانات الأساسية</div>' +
-    '<div style="font-size:12px;color:var(--gray);margin-bottom:.75rem">يجب اكتمالها قبل التقييم — لا تُحتسب في الدرجة</div>' +
-    COMPLETION_REQS.map(r => `
-      <div style="display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid #F0E8C8">
-        <input type="checkbox" id="req_${r.id}" style="width:17px;height:17px;accent-color:var(--gold);flex-shrink:0;margin-top:2px;cursor:pointer">
-        <label for="req_${r.id}" style="flex:1;cursor:pointer">
-          <div style="font-size:13px;font-weight:600;color:var(--dark)">${r.name}</div>
-          <div style="font-size:11px;color:var(--gray);margin-top:2px">${r.hint}</div>
-        </label>
-      </div>`).join('') +
-    '<div style="margin-top:.75rem;font-size:12px;color:var(--gray)">مخالفات شرعية/نظامية/فنية: <select id="violations" style="margin-right:8px;padding:4px 8px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;font-size:12px"><option value="نعم">لا توجد مخالفات ✅</option><option value="لا">توجد مخالفات ⚠️</option></select></div>';
+  reqDiv.style.cssText = 'background:#FFFBF0;border:2px solid var(--gold);border-radius:12px;padding:1rem 1.25rem;margin-bottom:1.1rem';
+  let reqHTML = '<div style="font-size:14px;font-weight:800;color:var(--dark);margin-bottom:.5rem">📋 شرط — شروط الاكتمال والبيانات الأساسية</div>';
+  reqHTML += '<div style="font-size:12px;color:var(--gray);margin-bottom:.85rem;padding:.5rem .75rem;background:rgba(200,168,75,.1);border-radius:7px">⚠️ يجب اكتمال هذه الشروط — لا تُحتسب في الدرجة الكلية</div>';
+  COMPLETION_REQS.forEach(function(r) {
+    reqHTML += '<div style="border:1px solid #F0E0A0;border-radius:9px;padding:.75rem 1rem;margin-bottom:.6rem;background:#fff">' +
+      '<div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:.35rem">' + r.name + '</div>' +
+      '<div style="font-size:11px;color:#7A6A00;background:#FFFDE0;padding:.4rem .7rem;border-radius:6px;margin-bottom:.6rem;line-height:1.6">🔍 ' + r.indicator + '</div>' +
+      '<select id="req_' + r.id + '" style="padding:7px 12px;border:1.5px solid var(--gold);border-radius:8px;font-family:inherit;font-size:13px;color:var(--dark);background:#fff;cursor:pointer;min-width:160px">' +
+      '<option value="">— اختر —</option>' +
+      COMPLETION_OPTIONS.map(function(o){ return '<option value="' + o + '">' + o + '</option>'; }).join('') +
+      '</select></div>';
+  });
+  reqDiv.innerHTML = reqHTML;
   cont.appendChild(reqDiv);
 
-  // ── المعايير بالقوائم المنسدلة مجمّعة ────────────────────
+  // ── المعايير مجمّعة بالمجال ──────────────────────────────
   const groups = {};
-  AXES.forEach(ax => {
+  AXES.forEach(function(ax) {
     if (!groups[ax.group]) groups[ax.group] = {name:ax.groupName, weight:ax.weight, axes:[]};
     groups[ax.group].axes.push(ax);
   });
 
-  const groupColors = {أ:'#B5D4F4', ب:'#9FE1CB', ج:'#FAC775', د:'#CECBF6'};
-  const groupBg     = {أ:'#EEF6FE', ب:'#E8FAF4', ج:'#FEF8EC', د:'#F4F2FE'};
+  const groupColors = {أ:'#B5D4F4',ب:'#9FE1CB',ج:'#FAC775',د:'#CECBF6'};
+  const groupBg     = {أ:'#F0F7FE',ب:'#F0FAF6',ج:'#FEF9F0',د:'#F8F6FE'};
 
-  Object.keys(groups).forEach(g => {
+  Object.keys(groups).forEach(function(g) {
     const grp = groups[g];
-    const grpDiv = document.createElement('div');
-    grpDiv.style.cssText = 'margin-bottom:1rem;border-radius:12px;overflow:hidden;border:1.5px solid ' + groupColors[g];
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'margin-bottom:1.1rem;border-radius:12px;overflow:hidden;border:2px solid ' + groupColors[g];
 
     // ترويسة المجال
     const hdr = document.createElement('div');
-    hdr.style.cssText = 'background:' + groupColors[g] + ';padding:.65rem 1rem;display:flex;align-items:center;justify-content:space-between';
+    hdr.style.cssText = 'background:' + groupColors[g] + ';padding:.7rem 1rem;display:flex;align-items:center;justify-content:space-between';
     hdr.innerHTML = '<span style="font-size:14px;font-weight:800;color:var(--dark)">' + g + ' — ' + grp.name + '</span>' +
-      '<span style="font-size:12px;font-weight:700;color:var(--dark);background:rgba(0,0,0,.1);padding:2px 10px;border-radius:20px">الوزن: ' + grp.weight + '%</span>';
-    grpDiv.appendChild(hdr);
+      '<span style="font-size:12px;font-weight:700;color:var(--dark);background:rgba(0,0,0,.12);padding:3px 12px;border-radius:20px">الوزن ' + grp.weight + '%</span>';
+    wrap.appendChild(hdr);
 
-    // المعايير
-    grp.axes.forEach((ax, idx) => {
+    grp.axes.forEach(function(ax, idx) {
       const row = document.createElement('div');
-      row.style.cssText = 'padding:.75rem 1rem;border-bottom:1px solid ' + groupColors[g] + ';background:' + (idx%2===0 ? groupBg[g] : '#fff');
-      row.innerHTML = `
-        <div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:3px">${ax.name}</div>
-        <div style="font-size:11px;color:var(--gray);margin-bottom:.5rem">${ax.hint}</div>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <select id="sel_${ax.id}" onchange="onSelectChange('${ax.id}')"
-            style="flex:1;min-width:200px;padding:7px 11px;border:1.5px solid ${groupColors[g]};border-radius:8px;font-family:inherit;font-size:13px;color:var(--dark);background:#fff;cursor:pointer">
-            <option value="">— اختر مستوى التقييم —</option>
-            ${ax.options.map(o => `<option value="${o}">${o}</option>`).join('')}
-          </select>
-          <span class="axis-score-display" id="asd_${ax.id}" style="display:none"></span>
-        </div>
-        <div style="margin-top:.5rem">
-          <div style="font-size:11px;color:var(--gray);margin-bottom:3px;font-weight:600">الشاهد / الملاحظة (اختياري):</div>
-          <textarea id="wit_${ax.id}" placeholder="أضف ملاحظتك أو شاهدك على هذا المعيار..."
-            style="width:100%;font-size:12px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;direction:rtl;resize:vertical;min-height:44px;color:var(--dark)"
-            oninput="evalWitnesses['${ax.id}']=this.value"></textarea>
-        </div>`;
-      grpDiv.appendChild(row);
-    });
+      row.style.cssText = 'padding:.9rem 1rem;border-bottom:1px solid ' + groupColors[g] + ';background:' + (idx%2===0?groupBg[g]:'#fff');
 
-    cont.appendChild(grpDiv);
+      row.innerHTML =
+        // اسم المعيار
+        '<div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:.4rem">' + ax.name + '</div>' +
+        // مؤشر القياس — الجوهر
+        '<div style="font-size:11.5px;color:#444;background:rgba(0,0,0,.04);border-right:3px solid ' + groupColors[g] + ';padding:.5rem .75rem;border-radius:0 7px 7px 0;margin-bottom:.65rem;line-height:1.65">🔍 <b style="color:var(--dark)">مؤشر القياس:</b> ' + ax.indicator + '</div>' +
+        // القائمة المنسدلة
+        '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:.5rem">' +
+          '<span style="font-size:12px;font-weight:600;color:var(--text-light)">مستوى التحقق:</span>' +
+          '<select id="sel_' + ax.id + '" onchange="onSelectChange('' + ax.id + '')"' +
+          ' style="flex:1;min-width:220px;padding:8px 12px;border:1.5px solid ' + groupColors[g] + ';border-radius:8px;font-family:inherit;font-size:13px;color:var(--dark);background:#fff;cursor:pointer">' +
+          '<option value="">— اختر مستوى التحقق —</option>' +
+          ax.options.map(function(o){ return '<option value="' + o + '">' + o + '</option>'; }).join('') +
+          '</select>' +
+          '<span class="axis-score-display" id="asd_' + ax.id + '" style="display:none;font-size:12px;font-weight:700;padding:4px 11px;border-radius:20px"></span>' +
+        '</div>' +
+        // خانة الشاهد
+        '<div style="font-size:11px;color:var(--gray);margin-bottom:3px;font-weight:600">الشاهد / الملاحظة التي بنيت عليها حكمك:</div>' +
+        '<textarea id="wit_' + ax.id + '"' +
+        ' placeholder="اكتب ما رأيته أو قرأته في الممارسة يثبت هذا التقييم..."' +
+        ' style="width:100%;font-size:12px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;direction:rtl;resize:vertical;min-height:44px"' +
+        ' oninput="evalWitnesses['' + ax.id + '']=this.value"></textarea>';
+
+      wrap.appendChild(row);
+    });
+    cont.appendChild(wrap);
   });
 
-  // حقل ملاحظات التغذية الراجعة
+  // حقل التغذية الراجعة
   const fbDiv = document.createElement('div');
-  fbDiv.style.cssText = 'background:var(--white);border:1.5px solid var(--border);border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem';
-  fbDiv.innerHTML = '<div style="font-size:14px;font-weight:800;color:var(--dark);margin-bottom:.5rem">💬 التغذية الراجعة</div>' +
-    '<textarea id="feedback_text" placeholder="أضف ملاحظاتك وتوجيهاتك للممارس..." style="width:100%;font-size:13px;padding:8px 11px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;direction:rtl;resize:vertical;min-height:70px;color:var(--dark)"></textarea>';
+  fbDiv.style.cssText = 'background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem';
+  fbDiv.innerHTML = '<div style="font-size:14px;font-weight:800;color:var(--dark);margin-bottom:.5rem">💬 التغذية الراجعة للممارس</div>' +
+    '<div style="font-size:12px;color:var(--gray);margin-bottom:.5rem">ملاحظات أساسية / توجيهات للتطوير / نقاط القوة</div>' +
+    '<textarea id="feedback_text" placeholder="اكتب ملاحظاتك وتوجيهاتك..." style="width:100%;font-size:13px;padding:8px 11px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;direction:rtl;resize:vertical;min-height:80px"></textarea>';
   cont.appendChild(fbDiv);
 }
 
