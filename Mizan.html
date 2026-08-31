@@ -420,7 +420,7 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 //  Google Sheets API Layer
 // ══════════════════════════════════════════════
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzyoHJChyjWeVgl-YDV-WydpSut74sC0ZorPpT9qFF_FuYdFay5dbYcIx9us5a-zf5X/exec';
-let DB_LOADED = false;
+let DB_LOADED = true; // البيانات الافتراضية جاهزة دائماً
 
 async function apiPost(body) {
   try {
@@ -430,18 +430,20 @@ async function apiPost(body) {
 }
 
 async function loadFromSheets() {
-  showLoading(true);
+  // تعمل في الخلفية — لا تُظهر شاشة تحميل
   try {
     const res = await fetch(SCRIPT_URL + '?action=getAllData');
     const json = await res.json();
     if (json.ok && json.data) {
       const d = json.data;
-      if (d.evaluators && d.evaluators.length) {
+      // فقط استبدل إذا الشيت يحتوي بيانات فعلية
+      if (d.evaluators && d.evaluators.length > 0) {
         DB.evaluators = d.evaluators.map(function(e) {
           return Object.assign({}, e, {done: Number(e.done)||0});
         });
       }
-      if (d.practices && d.practices.length) {
+      // الممارسات: اقرأها دائماً من الشيت (قد تكون أضافها المشرف)
+      if (d.practices && d.practices.length > 0) {
         DB.practices = d.practices.map(function(p) {
           var ev = p.evals;
           if (typeof ev === 'string') { try { ev = JSON.parse(ev); } catch(x) { ev = []; } }
@@ -449,7 +451,8 @@ async function loadFromSheets() {
           return Object.assign({}, p, {evals: ev});
         });
       }
-      if (d.results && d.results.length) {
+      // النتائج: اقرأها دائماً
+      if (d.results && d.results.length > 0) {
         DB.results = d.results.map(function(r) {
           var sc = r.scores, wi = r.witnesses;
           if (typeof sc === 'string') { try { sc = JSON.parse(sc); } catch(x) { sc = {}; } }
@@ -458,9 +461,19 @@ async function loadFromSheets() {
         });
       }
       DB_LOADED = true;
+    } else {
+      // الشيت فارغ أو خطأ — استخدم البيانات الافتراضية
+      DB_LOADED = true;
     }
-  } catch(e) { console.error('Load error:', e); }
-  showLoading(false);
+  } catch(e) {
+    console.error('Load error:', e);
+    // فشل الاتصال — استخدم البيانات الافتراضية المدمجة
+    DB_LOADED = true;
+    // إذا دخل مشرف — حدّث لوحته
+    if (currentUser && currentUser.sector === 'ADMIN') renderAdmin();
+    // إذا دخل محكّم — حدّث إحصاءاته
+    if (currentUser && currentUser.sector !== 'ADMIN') updateHomeStats();
+  }
 }
 
 function showLoading(on) {
@@ -1286,22 +1299,16 @@ let evalSubmitted = false;
 function doLogin() {
   const code = document.getElementById('inp-code').value.trim();
   const pass  = document.getElementById('inp-pass').value.trim();
-  if (!DB_LOADED) {
-    loadFromSheets().then(function() {
-      var user = DB.evaluators.find(function(u) { return u.code === code && u.pass === pass; });
-      if (!user) { document.getElementById('login-err').style.display='block'; return; }
-      currentUser = user;
-      finishLogin(user);
-    });
-    return;
-  }
-  const user  = DB.evaluators.find(u => u.code === code && u.pass === pass);
+  // الدخول فوري من البيانات المحلية
+  const user = DB.evaluators.find(function(u) { return u.code === code && u.pass === pass; });
   if (!user) {
     document.getElementById('login-err').style.display='block';
     return;
   }
   currentUser = user;
   finishLogin(user);
+  // تحديث من Sheets في الخلفية بعد الدخول
+  loadFromSheets();
 }
 
 function finishLogin(user) {
