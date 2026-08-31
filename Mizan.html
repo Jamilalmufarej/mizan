@@ -897,6 +897,33 @@ function showResult(avg, final) {
 // ══════════════════════════════════════════════
 //  إرسال التحكيم
 // ══════════════════════════════════════════════
+function calcWeightedScore(scores) {
+  var groups = {
+    'أ':{total:0,count:0,weight:10},
+    'ب':{total:0,count:0,weight:20},
+    'ج':{total:0,count:0,weight:30},
+    'د':{total:0,count:0,weight:40}
+  };
+  AXES.forEach(function(ax) {
+    var val = scores[ax.id];
+    if (!val) return;
+    var score = ax.scores[val];
+    if (score === null || score === undefined) return;
+    groups[ax.group].total += score;
+    groups[ax.group].count++;
+  });
+  var weightedTotal = 0, totalWeight = 0;
+  Object.keys(groups).forEach(function(g) {
+    var grp = groups[g];
+    if (grp.count > 0) {
+      var pct = (grp.total / (grp.count * 10)) * 100;
+      weightedTotal += pct * grp.weight / 100;
+      totalWeight += grp.weight;
+    }
+  });
+  return totalWeight > 0 ? (weightedTotal / totalWeight) * 100 : 0;
+}
+
 function submitEval() {
   if (evalSubmitted) return;
   evalSubmitted = true;
