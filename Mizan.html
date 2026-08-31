@@ -639,12 +639,12 @@ function doLogin() {
   }
   currentUser = user;
   finishLogin(user);
-  // تحديث من Sheets في الخلفية بعد الدخول
-  loadFromSheets();
 }
 
 function finishLogin(user) {
   document.getElementById('login-screen').style.display = 'none';
+  // تحميل من Sheets في الخلفية بعد ظهور الواجهة
+  setTimeout(function(){ loadFromSheets(); }, 2000);
   document.getElementById('app-screen').style.display   = 'block';
   document.getElementById('hdr-user-badge').textContent  = user.code;
   document.getElementById('welcome-name').textContent    = user.code;
@@ -796,7 +796,7 @@ function renderAxes() {
         // القائمة المنسدلة
         '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:.5rem">' +
           '<span style="font-size:12px;font-weight:600;color:var(--text-light)">مستوى التحقق:</span>' +
-          '<select id="sel_' + ax.id + '" onchange="onSelectChange('' + ax.id + '')"' +
+          '<select id="sel_' + ax.id + '" onchange="onSelectChange(\'' + ax.id + '\')"' +
           ' style="flex:1;min-width:220px;padding:8px 12px;border:1.5px solid ' + groupColors[g] + ';border-radius:8px;font-family:inherit;font-size:13px;color:var(--dark);background:#fff;cursor:pointer">' +
           '<option value="">— اختر مستوى التحقق —</option>' +
           ax.options.map(function(o){ return '<option value="' + o + '">' + o + '</option>'; }).join('') +
@@ -808,7 +808,7 @@ function renderAxes() {
         '<textarea id="wit_' + ax.id + '"' +
         ' placeholder="اكتب ما رأيته أو قرأته في الممارسة يثبت هذا التقييم..."' +
         ' style="width:100%;font-size:12px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;direction:rtl;resize:vertical;min-height:44px"' +
-        ' oninput="evalWitnesses['' + ax.id + '']=this.value"></textarea>';
+        ' oninput="evalWitnesses[\' + ax.id + \']=this.value"></textarea>';
 
       wrap.appendChild(row);
     });
